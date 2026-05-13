@@ -220,17 +220,16 @@ textarea.notes{background:var(--surface3);border:1px solid var(--border);color:v
 
 .adv-only{display:flex;}.s-section.adv-only{display:block;}.s-row.adv-only{display:flex;}
 /* ── SETTINGS BAR ── */
-.sb{background:var(--surface);border-bottom:2px solid var(--border);flex-shrink:0;}
-.sb-main{display:flex;align-items:center;gap:5px;padding:6px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
-.sb-field{display:flex;flex-direction:column;gap:2px;flex-shrink:0;}
+.sb{background:var(--surface);border-bottom:2px solid var(--border);flex-shrink:0;overflow-y:auto;}
+.sb-main{display:flex;flex-wrap:wrap;gap:8px 12px;padding:8px 10px;}
+.sb-field{display:flex;flex-direction:column;gap:3px;flex-shrink:0;}
 .sb-lbl{font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;}
 .sb select,.sb input[type=text],.sb input[type=number],.sb input[type=password]{font-size:11px;padding:4px 6px;background:var(--surface3);border:1px solid var(--border);color:var(--text);border-radius:6px;outline:none;-webkit-appearance:none;appearance:none;height:28px;}
 .sb select{padding-right:18px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 4 4-4' stroke='%239898b0' stroke-width='1.2' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 5px center;}
-.sb-div{width:1px;height:22px;background:var(--border);flex-shrink:0;margin:0 2px;}
+.sb-div{width:100%;height:1px;background:var(--border);margin:2px 0;}
 .sb-btn{background:var(--surface3);border:1px solid var(--border);color:var(--text2);font-size:10px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;height:28px;flex-shrink:0;}
 .sb-btn.open,.sb-btn:active{color:var(--accent2);border-color:var(--accent);}
-.sb-extra{display:none;flex-wrap:wrap;gap:8px;padding:8px 10px 10px;border-top:1px solid var(--border);background:var(--surface2);}
-.sb-extra.open{display:flex;}
+.sb-extra{display:flex;flex-wrap:wrap;gap:8px 12px;padding:0 10px 8px;}
 .sb-extra .sb-field input[type=text]{min-width:120px;}
 .inst-dd,.tpl-dd{position:relative;}
 .inst-dd-panel,.tpl-dd-panel{position:absolute;top:calc(100% + 4px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;z-index:80;display:none;box-shadow:0 4px 20px rgba(0,0,0,.5);}
@@ -244,6 +243,11 @@ textarea.notes{background:var(--surface3);border:1px solid var(--border);color:v
 .panel-milo{overflow-y:auto;}
 .milo-gen-btn{width:100%;padding:14px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:12px;}
 .milo-gen-btn:active{opacity:.8;}
+/* ── PERSISTENT BOTTOM ── */
+.persistent-bottom{flex-shrink:0;display:flex;flex-direction:column;border-top:2px solid var(--accent);background:var(--surface);height:26vh;min-height:190px;max-height:260px;}
+.persistent-bottom .tl-wrapper{flex:1;overflow-x:auto;overflow-y:hidden;position:relative;-webkit-overflow-scrolling:touch;min-height:0;}
+.persistent-bottom .tl-inner{position:relative;min-width:100%;}
+.canvas-panel{flex:1;overflow:hidden;display:flex;flex-direction:column;}
 /* Global desc strip on canvas */
 .gdesc-strip{background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 10px;flex-shrink:0;}
 .gdesc-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:0;}
@@ -412,62 +416,65 @@ textarea.notes{background:var(--surface3);border:1px solid var(--border);color:v
 <!-- SETTINGS BAR -->
 <div class="sb" id="settingsBar">
   <div class="sb-main">
-    <div class="sb-field"><span class="sb-lbl">Song Name</span><input type="text" id="sName" value="Untitled Song" style="min-width:90px;max-width:120px" onchange="us('name',this.value)"></div>
-    <div class="sb-div"></div>
-    <div class="sb-field"><span class="sb-lbl">Genre</span><select id="sGenre" style="min-width:95px" onchange="us('genre',this.value)"></select></div>
-    <div class="sb-div"></div>
+    <!-- Row 1: Core settings -->
+    <div class="sb-field"><span class="sb-lbl">Song Name</span><input type="text" id="sName" value="Untitled Song" style="min-width:100px;max-width:130px" onchange="us('name',this.value)"></div>
+    <div class="sb-field"><span class="sb-lbl">Genre</span>
+      <div class="inst-dd">
+        <button class="sb-btn" id="genreDDBtn" onclick="toggleGenreDD(event)" style="min-width:100px;text-align:left" id="genreDDBtn"><span id="genreDDLabel">Pop</span> ▾</button>
+        <div class="inst-dd-panel" id="genreDDPanel" style="width:220px;"></div>
+      </div>
+      <select id="sGenre" style="display:none" onchange="us('genre',this.value)"></select>
+    </div>
     <div class="sb-field"><span class="sb-lbl">BPM</span>
       <div style="display:flex;gap:3px">
-        <input type="number" id="sBpm" value="120" min="60" max="200" style="width:50px" onchange="us('bpm',parseInt(this.value))">
-        <button class="sb-btn" onclick="tapBPM()" title="Tap rhythm">♩Tap</button>
+        <input type="number" id="sBpm" value="120" min="60" max="200" style="width:52px" onchange="us('bpm',parseInt(this.value))">
+        <button class="sb-btn" onclick="tapBPM()">♩Tap</button>
       </div>
     </div>
-    <div class="sb-div"></div>
-    <div class="sb-field"><span class="sb-lbl">Key</span><select id="sKey" style="min-width:70px" onchange="us('key',this.value)"></select></div>
+    <div class="sb-field"><span class="sb-lbl">Key</span><select id="sKey" style="min-width:72px" onchange="us('key',this.value)"></select></div>
+    <div class="sb-field"><span class="sb-lbl">Scale</span><select id="sScale" style="min-width:85px" onchange="us('scale',this.value)"></select></div>
     <div class="sb-field"><span class="sb-lbl">Mood</span><select id="sMood" style="min-width:90px" onchange="us('mood',this.value)"></select></div>
-    <div class="sb-div"></div>
-    <div class="sb-field"><span class="sb-lbl">Vocals</span><select id="sVocal" style="min-width:110px" onchange="us('vocalType',this.value);syncVocalQuick(this.value)"></select></div>
-    <div class="sb-div"></div>
-    <button class="sb-btn" id="sbMoreBtn" onclick="toggleSBExtra()">More ▾</button>
-  </div>
-  <div class="sb-extra" id="sbExtra">
-    <div class="sb-field"><span class="sb-lbl">Scale</span><select id="sScale" onchange="us('scale',this.value)"></select></div>
-    <div class="sb-field"><span class="sb-lbl">Time Sig</span><select id="sTimeSig" onchange="us('timeSig',this.value)"></select></div>
-    <div class="sb-field"><span class="sb-lbl">Feel</span><select id="sTempoFeel" onchange="us('tempoFeel',this.value)"></select></div>
-    <div class="sb-field"><span class="sb-lbl">Style/Sub-genre</span><input type="text" id="sStyle" placeholder="e.g. Progressive..." onchange="us('style',this.value)"></div>
-    <div class="sb-field"><span class="sb-lbl">Sounds Like</span><input type="text" id="sSoundsLike" placeholder="e.g. Deadmau5..." onchange="us('soundsLike',this.value)"></div>
-    <div class="sb-field"><span class="sb-lbl">Length</span><select id="sLength" onchange="us('targetLength',parseInt(this.value));autoCalcBars()"></select></div>
+    <div class="sb-field"><span class="sb-lbl">Vocals</span><select id="sVocal" style="min-width:120px" onchange="us('vocalType',this.value);syncVocalQuick(this.value)"></select></div>
+    <div class="sb-field"><span class="sb-lbl">Time Sig</span><select id="sTimeSig" style="min-width:60px" onchange="us('timeSig',this.value)"></select></div>
+    <div class="sb-field"><span class="sb-lbl">Feel</span><select id="sTempoFeel" style="min-width:85px" onchange="us('tempoFeel',this.value)"></select></div>
+    <div class="sb-field"><span class="sb-lbl">Length</span><select id="sLength" style="min-width:70px" onchange="us('targetLength',parseInt(this.value));autoCalcBars()"></select></div>
+    <!-- Row divider -->
+    <div class="sb-div" style="flex-basis:100%;height:1px;"></div>
+    <!-- Row 2: Sound description -->
+    <div class="sb-field"><span class="sb-lbl">Style / Sub-genre</span><input type="text" id="sStyle" placeholder="e.g. Progressive Trance..." style="min-width:130px" onchange="us('style',this.value)"></div>
+    <div class="sb-field"><span class="sb-lbl">Sounds Like</span><input type="text" id="sSoundsLike" placeholder="e.g. Deadmau5, Above & Beyond..." style="min-width:150px" onchange="us('soundsLike',this.value)"></div>
     <div class="sb-field"><span class="sb-lbl">Instruments</span>
       <div class="inst-dd">
         <button class="sb-btn" id="instDDBtn" onclick="toggleInstDD(event)">🎸 Select ▾</button>
         <div class="inst-dd-panel" id="instDDPanel"></div>
       </div>
     </div>
-    <div class="sb-field" style="flex:1;min-width:130px"><span class="sb-lbl">Production Notes</span><input type="text" id="sProdNotes" placeholder="e.g. warm analog..." style="width:100%" onchange="us2('prodNotes',this.value)"></div>
-    <div class="sb-field" style="flex:1;min-width:130px"><span class="sb-lbl">Description</span><input type="text" id="sAddNotes" placeholder="e.g. cinematic..." style="width:100%" onchange="us2('addNotes',this.value)"></div>
+    <div class="sb-field" style="flex:1;min-width:130px"><span class="sb-lbl">Production Notes</span><input type="text" id="sProdNotes" placeholder="e.g. warm analog, punchy drums..." style="width:100%" onchange="us2('prodNotes',this.value)"></div>
+    <div class="sb-field" style="flex:1;min-width:130px"><span class="sb-lbl">Description / Vibe</span><input type="text" id="sAddNotes" placeholder="e.g. cinematic, hypnotic, dark..." style="width:100%" onchange="us2('addNotes',this.value)"></div>
     <div class="sb-field"><span class="sb-lbl">Templates</span>
       <div class="tpl-dd">
-        <button class="sb-btn" id="tplDDBtn" onclick="toggleTplDD(event)">📋 Templates ▾</button>
+        <button class="sb-btn" id="tplDDBtn" onclick="toggleTplDD(event)">📋 ▾</button>
         <div class="tpl-dd-panel" id="tplDDPanel"></div>
       </div>
     </div>
-    <div class="sb-field" style="flex:1;min-width:150px"><span class="sb-lbl">AI Key <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent2);font-size:8px">↗ Get key</a></span>
+    <div class="sb-field" style="min-width:160px"><span class="sb-lbl">AI Key <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent2);font-size:8px">↗ Get</a></span>
       <div style="display:flex;gap:3px">
         <input type="password" id="aiKeyInput" placeholder="Gemini API key..." style="flex:1;min-width:0">
         <button class="sb-btn" onclick="saveApiKey()">Save</button>
       </div>
     </div>
-    <div class="sb-field" style="min-width:150px"><span class="sb-lbl">AI Model</span>
+    <div class="sb-field" style="min-width:160px"><span class="sb-lbl">AI Model</span>
       <div style="display:flex;gap:3px">
         <input type="text" id="aiModelInput" placeholder="gemini-2.5-flash-lite" style="min-width:110px" onfocus="this.select()">
         <button class="sb-btn" onclick="saveModelName()">Set</button>
         <button class="sb-btn" id="checkModelsBtn" onclick="checkAvailableModels()">🔍</button>
       </div>
     </div>
-    <!-- Hidden global inst chips for JS compatibility -->
-    <div style="display:none"><div id="globalInstChips"></div></div>
-    <!-- Hidden BPM range for JS compatibility -->
-    <input type="range" id="sBpmR" min="60" max="200" style="display:none">
+  </div>
+  <!-- Hidden elements for JS compatibility -->
+  <div style="display:none">
+    <div id="globalInstChips"></div>
+    <input type="range" id="sBpmR" min="60" max="200">
   </div>
 </div>
 
@@ -482,31 +489,8 @@ textarea.notes{background:var(--surface3);border:1px solid var(--border);color:v
 <!-- CANVAS PANEL -->
 <div class="panel canvas-panel active" id="panel-canvas">
   <div id="metaBar" style="display:none"></div>
-  <div class="tl-toolbar">
-    <button class="tl-btn" onclick="shareLink()">🔗 Share</button>
-    <div class="tl-spacer"></div>
-    <div class="tl-zoom">
-      <button class="zoom-btn" onclick="adjustZoom(-6)">−</button>
-      <button class="tl-btn" onclick="autoZoom();renderTL()" title="Fit all blocks on screen">⊡ Fit</button>
-      <span id="zoomLabel">Fit</span>
-      <button class="zoom-btn" onclick="adjustZoom(6)">+</button>
-    </div>
-  </div>
-  <div class="tl-wrapper" id="tlWrapper">
-    <div class="tl-inner" id="tlInner">
-      <div class="bar-ruler" id="barRuler"></div>
-      <div class="track-area" id="trackArea">
-        <div class="drop-hint" id="dropHint">↓ Tap a block below to start building your song</div>
-      </div>
-      <div class="energy-curve" id="energyCurve">
-        <div class="ec-label">⚡ Energy Curve — drag points to adjust</div>
-        <svg id="energySvg" style="width:100%;height:64px;"></svg>
-      </div>
-    </div>
-  </div>
-  <div class="palette">
-    <div class="pal-label">Add Section — tap to place on timeline</div>
-    <div class="pal-items" id="palItems"></div>
+  <div class="canvas-hint" style="display:flex;align-items:center;justify-content:center;flex:1;color:var(--text3);font-size:13px;">
+    Use the timeline below to build your song structure
   </div>
 </div>
 
@@ -668,6 +652,7 @@ function init() {
   buildInstChips();
   buildGlobalInstChips();
   buildTemplates();
+  buildGenreDropdown();
   updateSettingsUI();
   autoZoom();
   renderTL();
@@ -1074,6 +1059,50 @@ function dupBlock(){
 }
 
 // ═══════════════ VOCAL QUICK BUTTONS ═══════════════
+function toggleSBExtra(){} // All fields always visible now
+
+function _ddToggle(panelId,btnId,e){
+  if(e)e.stopPropagation();
+  const p=document.getElementById(panelId);
+  const b=document.getElementById(btnId);
+  if(!p)return;
+  const open=p.classList.toggle('open');
+  if(b)b.classList.toggle('open',open);
+  if(open){
+    const close=ev=>{if(!p.contains(ev.target)){p.classList.remove('open');if(b)b.classList.remove('open');document.removeEventListener('click',close);}}
+    document.addEventListener('click',close);
+  }
+}
+function toggleInstDD(e){_ddToggle('instDDPanel','instDDBtn',e);}
+function toggleTplDD(e){_ddToggle('tplDDPanel','tplDDBtn',e);}
+function toggleGenreDD(e){_ddToggle('genreDDPanel','genreDDBtn',e);}
+function toggleGdesc(){}
+function applyGlobalDescText(){}
+
+function buildGenreDropdown(){
+  const p=document.getElementById('genreDDPanel');
+  if(!p)return;
+  p.innerHTML='';
+  GENRES.forEach(genre=>{
+    const item=document.createElement('div');
+    item.className='tpl-dd-item';
+    item.textContent=genre;
+    item.style.cssText='font-size:11px;padding:5px 8px;';
+    item.onclick=()=>{
+      const sel=document.getElementById('sGenre');
+      if(sel){sel.value=genre;}
+      us('genre',genre);
+      const lbl=document.getElementById('genreDDLabel');
+      if(lbl)lbl.textContent=genre;
+      p.classList.remove('open');
+      const btn=document.getElementById('genreDDBtn');if(btn)btn.classList.remove('open');
+    };
+    p.appendChild(item);
+  });
+  const lbl=document.getElementById('genreDDLabel');
+  if(lbl)lbl.textContent=state.song.genre||'Pop';
+}
+
 function setVocalQuick(v){
   const el=document.getElementById('sVocal');
   if(el){el.value=v;}
@@ -1396,9 +1425,7 @@ function renderOutput(){
   document.getElementById('charStatus').textContent=styleLen<=1000?`✅ Style prompt fits — ${1000-styleLen} chars remaining`:`⚠️ ${styleLen-1000} chars over limit`;
 
   cont.innerHTML='';
-  acts.innerHTML=`
-    <button class="abtn ai" onclick="showIteration()">🔁 Iteration Mode</button>
-    <button class="abtn" style="background:rgba(251,191,36,.15);border:1px solid #f59e0b;color:#f59e0b;" onclick="showMiloMode()">🎹 Milo Mode</button>`;
+  acts.innerHTML=`<button class="abtn ai" style="width:100%" onclick="showIteration()">🔁 Iteration Mode — 3 Step Prompts</button>`;
 
   if(gen==='suno'){
     const d1=document.createElement('div');
@@ -2111,8 +2138,7 @@ function buildSongJSON(){
 async function aiExpand(){
   const apiKey=localStorage.getItem('sv_apikey');
   if(!apiKey){
-    showToast('Add your Gemini API key in Settings first');
-    toggleSBExtra();
+    showToast('Add your Gemini API key in the Settings Bar (More ▾ → AI Key)');
     return;
   }
   if(!state.song.sections.length){
@@ -2234,5 +2260,36 @@ window.addEventListener('resize',()=>{autoZoom();renderTL();});
 // ═══════════════ START ═══════════════
 init();
 </script>
+
+<!-- PERSISTENT BOTTOM — always visible across all tabs -->
+<div class="persistent-bottom" id="persistentBottom">
+  <div class="tl-toolbar">
+    <button class="tl-btn" onclick="shareLink()">🔗 Share</button>
+    <div class="tl-spacer"></div>
+    <div class="tl-zoom">
+      <button class="zoom-btn" onclick="adjustZoom(-6)">−</button>
+      <button class="tl-btn" onclick="autoZoom();renderTL()" title="Fit all blocks on screen">⊡ Fit</button>
+      <span id="zoomLabel">Fit</span>
+      <button class="zoom-btn" onclick="adjustZoom(6)">+</button>
+    </div>
+  </div>
+  <div class="tl-wrapper" id="tlWrapper">
+    <div class="tl-inner" id="tlInner">
+      <div class="bar-ruler" id="barRuler"></div>
+      <div class="track-area" id="trackArea">
+        <div class="drop-hint" id="dropHint">↓ Tap a block from the palette below to start building your song</div>
+      </div>
+      <div class="energy-curve" id="energyCurve">
+        <div class="ec-label">⚡ Energy Curve — drag points to adjust</div>
+        <svg id="energySvg" style="width:100%;height:64px;"></svg>
+      </div>
+    </div>
+  </div>
+  <div class="palette">
+    <div class="pal-label">Add Section — click or tap to place</div>
+    <div class="pal-items" id="palItems"></div>
+  </div>
+</div>
+
 </body>
 </html>
