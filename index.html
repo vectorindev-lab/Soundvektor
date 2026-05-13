@@ -590,7 +590,7 @@ const ST = {
 };
 const TRANS = ['Hard Cut','Fade In','Build Up','Drop','Breakdown Into','Smooth Flow','Key Change','Silence'];
 const INSTS = ['Guitar','Bass','Drums','Piano','Synth','Strings','Brass','808','Pad','Arp','Choir','Organ','Lead','Sub Bass','Acoustic Guitar','Violin','Flute','Sax','Trumpet','Hi-Hats','Claps','Shaker','Bells','Harp'];
-const GENRES = ['Pop','Rock','Hip-Hop','R&B','EDM','Electronic','Folk','Country','Jazz','Classical','Metal','Indie','Reggae','Latin','Funk','Soul','Blues','Punk','Alternative','Ambient','Lo-fi','House','Techno','Drum & Bass','Trap','Gospel','Afrobeats','K-Pop'];
+const GENRES = ['Pop','Rock','Hip-Hop','R&B','EDM','Electronic','Trance','Psy Trance','Progressive Trance','House','Progressive House','Techno','Drum & Bass','Trap','Folk','Country','Jazz','Classical','Metal','Indie','Reggae','Latin','Funk','Soul','Blues','Punk','Alternative','Ambient','Lo-fi','Gospel','Afrobeats','K-Pop'];
 const MOODS = ['Euphoric','Melancholic','Aggressive','Dreamy','Nostalgic','Romantic','Dark','Uplifting','Mysterious','Playful','Intense','Chill','Angry','Ethereal','Hopeful','Empowering','Heartbroken','Triumphant'];
 const KEYS = ['N/A','C','C#/Db','D','D#/Eb','E','F','F#/Gb','G','G#/Ab','A','A#/Bb','B'];
 const SCALES = ['Major','Minor','Dorian','Phrygian','Lydian','Mixolydian','Pentatonic Major','Pentatonic Minor','Blues'];
@@ -1587,6 +1587,78 @@ function generateClaudeConnectActions(miloJSON){
   return actions;
 }
 
+function buildClaudeConnectPrompt(miloJSON, actionPlan){
+  const s=state.song;
+  return `You are controlling a browser with computer use capability.
+
+YOUR TASK: Build the song "${miloJSON.song.title}" inside Suno Milo, section by section.
+
+## STEP 1 — NAVIGATE TO SUNO MILO
+1. Open suno.com in the browser
+2. Log in if required
+3. In the left sidebar, scroll to the bottom and click "Labs"
+4. Select "Milo" from the Labs menu
+5. Confirm you are inside the Milo step sequencer interface
+
+## STEP 2 — INITIAL SETUP
+- Set BPM to: ${miloJSON.song.tempo}
+- Key: ${miloJSON.song.key}
+- Genre context: ${miloJSON.song.genre} — ${miloJSON.song.mood} feel
+
+## STEP 3 — EXECUTE THE SONG STRUCTURE
+Build each section below in order. For each section:
+- Create the section / set bar length
+- Paint drum patterns on the drum track
+- Paint bass pattern on the bass track (if applicable)
+- Set chord progression on the chord/pad track
+- Place motif if specified
+- Set transition before moving to next section
+
+## MILO JSON INSTRUCTION SET
+\`\`\`json
+${JSON.stringify(miloJSON,null,2)}
+\`\`\`
+
+## DETAILED ACTION PLAN
+${actionPlan}
+
+## ERROR HANDLING
+- If a Milo control has moved or changed label: describe what you see and ask for guidance
+- If a pattern cannot be painted as described: use the nearest available equivalent
+- If Milo interface has updated: note the differences and adapt where possible
+- If login is required: pause and ask the user to log in, then continue
+
+## COMPLETION
+When all sections are built:
+1. Review the full sequence
+2. Export stems if available
+3. Export MIDI if available
+4. Report back: list each section completed and any adaptations made
+
+Begin now with Step 1.`;
+}
+
+function sendToClaudeConnect(){
+  const miloJSON=translateToMiloJSON();
+  if(!miloJSON){showToast('Add sections to Canvas first');return;}
+  const actionPlan=generateClaudeConnectActions(miloJSON);
+  const prompt=buildClaudeConnectPrompt(miloJSON,actionPlan);
+  navigator.clipboard.writeText(prompt).then(()=>{
+    showToast('✅ Claude Connect prompt copied!');
+    // Open Claude in new tab
+    window.open('https://claude.ai/new','_blank');
+  }).catch(()=>{
+    const ta=document.createElement('textarea');
+    ta.value=prompt;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('✅ Copied! Open Claude and paste.');
+    window.open('https://claude.ai/new','_blank');
+  });
+}
+
 function showMiloMode(){
   const cont=document.getElementById('promptsContainer');
   const acts=document.getElementById('outActions');
@@ -1597,30 +1669,39 @@ function showMiloMode(){
   }
   const actionPlan=generateClaudeConnectActions(miloJSON);
   cont.innerHTML='';
-  acts.innerHTML=`<button class="abtn secondary" onclick="renderOutput()">← Back</button>`;
+  acts.innerHTML=`
+    <button class="abtn secondary" onclick="renderOutput()">← Back</button>
+    <button class="abtn" style="background:linear-gradient(135deg,#7c6af7,#c084fc);color:#fff;border:none;flex:2;" onclick="sendToClaudeConnect()">🤖 Send to Claude Connect → Open Milo</button>`;
 
   // Info banner
   const banner=document.createElement('div');
   banner.className='bp-box';
-  banner.innerHTML=`<h4>🎹 Suno Milo Integration Mode</h4>
-    <p><strong>Mode A</strong> (Output tab) = human-readable Suno prompts for text-based generation.</p>
-    <p><strong>Mode B</strong> (this view) = machine-readable Milo JSON + Claude Connect action plan for automated pattern-based building inside Suno Milo.</p>
-    <p style="color:var(--accent2)">Paste the JSON into your Claude Connect agent, or follow the action plan manually in Milo.</p>`;
+  banner.innerHTML=`<h4>🎹 Suno Milo — Claude Connect Mode</h4>
+    <p><strong>How it works:</strong> Click <strong>Send to Claude Connect</strong> → Claude.ai opens automatically → paste the prompt → Claude navigates to Suno Milo and builds your song section by section.</p>
+    <p><strong>What Claude will do:</strong> Open Suno → navigate to Labs → Milo → paint drum patterns, bass lines, chords and motifs for each section → export stems.</p>
+    <p style="color:var(--accent2)">⚠️ You need Claude Pro with computer use enabled, and Suno logged in on the same browser.</p>`;
   cont.appendChild(banner);
+
+  // Send button (large, prominent)
+  const bigBtn=document.createElement('button');
+  bigBtn.style.cssText='width:100%;padding:16px;border-radius:12px;background:linear-gradient(135deg,#7c6af7,#c084fc);color:#fff;border:none;font-size:15px;font-weight:800;cursor:pointer;margin:10px 0;';
+  bigBtn.innerHTML='🤖 Send to Claude Connect → Open Milo';
+  bigBtn.onclick=sendToClaudeConnect;
+  cont.appendChild(bigBtn);
 
   // JSON output
   const d1=document.createElement('div');
   d1.style.cssText='font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:10px 0 2px;';
-  d1.textContent='── Mode B — Milo Instruction JSON ──';
+  d1.textContent='── Milo JSON ──';
   cont.appendChild(d1);
-  cont.appendChild(makeCard('🎹 Milo JSON — Paste into Claude Connect',JSON.stringify(miloJSON,null,2),'milo-json'));
+  cont.appendChild(makeCard('🎹 Milo Instruction JSON',JSON.stringify(miloJSON,null,2),'milo-json'));
 
   // Action plan
   const d2=document.createElement('div');
   d2.style.cssText='font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:10px 0 2px;';
-  d2.textContent='── Claude Connect Action Plan — Execute in Milo ──';
+  d2.textContent='── Claude Connect Action Plan ──';
   cont.appendChild(d2);
-  cont.appendChild(makeCard('🤖 Step-by-Step Milo Action Plan',actionPlan,'milo-actions'));
+  cont.appendChild(makeCard('🤖 Step-by-Step Action Plan',actionPlan,'milo-actions'));
 }
 
 function showIteration(){
