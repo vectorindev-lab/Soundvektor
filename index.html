@@ -1409,7 +1409,9 @@ function renderOutput(){
   document.getElementById('charStatus').textContent=styleLen<=1000?`✅ Style prompt fits — ${1000-styleLen} chars remaining`:`⚠️ ${styleLen-1000} chars over limit`;
 
   cont.innerHTML='';
-  acts.innerHTML=`<button class="abtn ai" onclick="showIteration()">🔁 Iteration Mode (3 Prompts)</button>`;
+  acts.innerHTML=`
+    <button class="abtn ai" onclick="showIteration()">🔁 Iteration Mode</button>
+    <button class="abtn" style="background:rgba(251,191,36,.15);border:1px solid #f59e0b;color:#f59e0b;" onclick="showMiloMode()">🎹 Milo Mode</button>`;
 
   if(gen==='suno'){
     const d1=document.createElement('div');
@@ -1429,6 +1431,196 @@ function renderOutput(){
 
   saveToHistory(stylePrompt,gen);
   renderHistory();
+}
+
+// ═══════════════ MILO INTEGRATION ENGINE ═══════════════
+
+function energyToDensity(e){ return e<=3?'sparse':e<=6?'medium':'dense'; }
+function energyToFloat(e){ return parseFloat((e/10).toFixed(1)); }
+
+function drumPatternForEnergy(e,genre){
+  const isEDM=['EDM','Trance','House','Electronic','Drum & Bass','Techno'].includes(genre);
+  if(e<=3) return {pattern:'hats only, 1/8th, light swing',density:0.3};
+  if(e<=5) return {pattern:'kick on 1 and 3, snare on 2 and 4, hats 1/8th',density:0.5};
+  if(e<=7) return isEDM
+    ?{pattern:'four-on-the-floor kick, snare on 2 and 4, 16th hats, closed',density:0.7}
+    :{pattern:'driving kick on 1-2-3-4, punchy snare, 16th hats',density:0.7};
+  return isEDM
+    ?{pattern:'four-on-the-floor kick, snare on 2 and 4, open hat accents, 32nd rolls',density:0.9}
+    :{pattern:'explosive full kit, rapid 32nd hat fills, snare rolls',density:0.95};
+}
+
+function bassForSection(sec,song){
+  if(sec.instrumental===true&&sec.energy<=3) return null;
+  if(sec.type==='Intro'&&sec.energy<=3) return null;
+  const e=sec.energy;
+  const root=song.key!=='N/A'?song.key.split('/')[0]:'C';
+  if(e<=3) return {style:'sustained',pattern:'root note held, whole bars',root,movement:'static'};
+  if(e<=5) return {style:'rolling',pattern:'syncopated 1/16',root,movement:'down-up contour'};
+  if(e<=7) return {style:'driving',pattern:'1/8th pump, accented off-beats',root,movement:'upward contour'};
+  return {style:'aggressive',pattern:'16th note pump with slides',root,movement:'rising-falling contour'};
+}
+
+function chordsForSection(sec,song){
+  const key=song.key!=='N/A'?song.key.split('/')[0]:'C';
+  const scale=song.scale||'Minor';
+  const minor=scale.toLowerCase().includes('minor')||scale.toLowerCase().includes('dorian');
+  const e=sec.energy;
+  // Basic progression by section type
+  const progs={
+    Intro: minor?[[`${key}min7`]]:[[`${key}maj7`]],
+    Verse: minor?[[`${key}min7`,`${key === 'C'?'F':'D'}9`]]:[[`${key}maj7`,`${key}6`]],
+    Chorus: minor?[[`${key}min`,`${key === 'C'?'Ab':'F'}maj`,`${key === 'C'?'Eb':'C'}maj`,`${key === 'C'?'Bb':'G'}maj`]]:[[`${key}maj`,`${key}6`,`${key}maj7`]],
+    Bridge: [[`${key === 'C'?'Ab':'F'}maj7`,`${key === 'C'?'Eb':'C'}9`]],
+    Breakdown: minor?[[`${key}min7`]]:[[`${key}maj9`]],
+    Outro: minor?[[`${key}min7`]]:[[`${key}maj7`]],
+  };
+  const progression=(progs[sec.type]||progs.Verse)[0];
+  const rhythm=e<=3?'sustained pad':e<=5?'offbeat stabs':e<=7?'rhythmic chops':'driving 8th stabs';
+  return {progression,rhythm};
+}
+
+function motifForSection(sec,idx){
+  if(sec.energy<=4) return null;
+  if(['Intro','Breakdown','Outro'].includes(sec.type)&&sec.energy<=6) return null;
+  const types=['Chorus','Drop','Hook'];
+  const isHighlight=types.includes(sec.type)||sec.energy>=8;
+  return {
+    type:isHighlight?'4-note ascending hook, prominent':'subtle 2-note accent',
+    placement:isHighlight?'bar 1 and every 4 bars':'bar 4 and 8'
+  };
+}
+
+function translateToMiloJSON(){
+  const s=state.song;
+  const secs=s.sections;
+  if(!secs.length)return null;
+  const genre=s.genre;
+  const miloSections=secs.map((sec,idx)=>{
+    const bars=sec.bars||({Intro:4,Verse:8,'Pre-Chorus':4,Chorus:8,Hook:4,Bridge:4,Breakdown:4,Solo:8,Instrumental:8,Outro:8}[sec.type]||8);
+    const drums=drumPatternForEnergy(sec.energy,genre);
+    const bass=bassForSection(sec,s);
+    const chords=chordsForSection(sec,s);
+    const motif=motifForSection(sec,idx);
+    return {
+      name:sec.label||sec.type,
+      bars,
+      energy:sec.energy,
+      density:energyToDensity(sec.energy),
+      transition:sec.transition||'smooth',
+      drums,
+      bass,
+      chords,
+      motif,
+      instruments:sec.instruments.length?sec.instruments:[],
+      notes:sec.specialInstructions||''
+    };
+  });
+  return {
+    song:{
+      title:s.name||'Untitled',
+      tempo:s.bpm,
+      key:s.key!=='N/A'?`${s.key} ${s.scale}`:'Not specified',
+      genre:s.genre,
+      style:s.style||'',
+      mood:s.mood,
+      vocal:s.vocalType,
+      sections:miloSections
+    }
+  };
+}
+
+function generateClaudeConnectActions(miloJSON){
+  if(!miloJSON)return '';
+  const {song}=miloJSON;
+  let actions=`# CLAUDE CONNECT — SUNO MILO ACTION PLAN\n`;
+  actions+=`# Song: ${song.title} | ${song.tempo} BPM | ${song.key} | ${song.genre}\n\n`;
+  actions+=`## SETUP\n`;
+  actions+=`1. Open Suno → Studio → Milo\n`;
+  actions+=`2. Set BPM to ${song.tempo}\n`;
+  actions+=`3. Set key to ${song.key}\n`;
+  actions+=`4. Create ${song.sections.length} sections (Step count: ${song.sections.length})\n\n`;
+  song.sections.forEach((sec,i)=>{
+    actions+=`## SECTION ${i+1}: ${sec.name.toUpperCase()} (${sec.bars} bars | Energy ${sec.energy}/10 | ${sec.density})\n\n`;
+    // Drums
+    actions+=`### DRUMS\n`;
+    actions+=`- Paint kick pattern: ${sec.drums.pattern}\n`;
+    actions+=`- Set density: ${sec.drums.density}\n`;
+    actions+=`- Generate drum sound\n\n`;
+    // Bass
+    if(sec.bass){
+      actions+=`### BASS\n`;
+      actions+=`- Style: ${sec.bass.style}\n`;
+      actions+=`- Paint rhythm: ${sec.bass.pattern}\n`;
+      actions+=`- Root note: ${sec.bass.root}\n`;
+      actions+=`- Movement: ${sec.bass.movement}\n`;
+      actions+=`- Generate bassline\n\n`;
+    } else {
+      actions+=`### BASS: None (leave empty for this section)\n\n`;
+    }
+    // Chords
+    actions+=`### CHORDS\n`;
+    actions+=`- Progression: ${sec.chords.progression.join(' → ')}\n`;
+    actions+=`- Rhythm: ${sec.chords.rhythm}\n`;
+    actions+=`- Paint chord rhythm on pad/synth track\n`;
+    actions+=`- Generate chord voicing\n\n`;
+    // Motif
+    if(sec.motif){
+      actions+=`### MOTIF\n`;
+      actions+=`- Type: ${sec.motif.type}\n`;
+      actions+=`- Placement: ${sec.motif.placement}\n`;
+      actions+=`- Generate lead synth / vocal chop sound\n\n`;
+    }
+    // Transition
+    actions+=`### TRANSITION INTO NEXT\n`;
+    const t=sec.transition||'smooth';
+    if(t==='Drop'||t==='Build Up') actions+=`- Add layers before next section — riser/uplifter\n`;
+    else if(t==='Breakdown'||t==='Breakdown Into') actions+=`- Remove layers — drum roll out, reverb tail\n`;
+    else if(t==='Hard Cut') actions+=`- Abrupt pattern reset — no transition FX\n`;
+    else actions+=`- Gradual density change into next section\n`;
+    actions+=`- Duplicate section pattern if repeating\n\n`;
+  });
+  actions+=`## EXPORT\n`;
+  actions+=`1. Export stems (individual tracks)\n`;
+  actions+=`2. Export full loop\n`;
+  actions+=`3. Export MIDI for DAW import\n`;
+  return actions;
+}
+
+function showMiloMode(){
+  const cont=document.getElementById('promptsContainer');
+  const acts=document.getElementById('outActions');
+  const miloJSON=translateToMiloJSON();
+  if(!miloJSON){
+    cont.innerHTML='<div class="empty-state"><div class="eico">🎹</div>Add sections to Canvas first.</div>';
+    return;
+  }
+  const actionPlan=generateClaudeConnectActions(miloJSON);
+  cont.innerHTML='';
+  acts.innerHTML=`<button class="abtn secondary" onclick="renderOutput()">← Back</button>`;
+
+  // Info banner
+  const banner=document.createElement('div');
+  banner.className='bp-box';
+  banner.innerHTML=`<h4>🎹 Suno Milo Integration Mode</h4>
+    <p><strong>Mode A</strong> (Output tab) = human-readable Suno prompts for text-based generation.</p>
+    <p><strong>Mode B</strong> (this view) = machine-readable Milo JSON + Claude Connect action plan for automated pattern-based building inside Suno Milo.</p>
+    <p style="color:var(--accent2)">Paste the JSON into your Claude Connect agent, or follow the action plan manually in Milo.</p>`;
+  cont.appendChild(banner);
+
+  // JSON output
+  const d1=document.createElement('div');
+  d1.style.cssText='font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:10px 0 2px;';
+  d1.textContent='── Mode B — Milo Instruction JSON ──';
+  cont.appendChild(d1);
+  cont.appendChild(makeCard('🎹 Milo JSON — Paste into Claude Connect',JSON.stringify(miloJSON,null,2),'milo-json'));
+
+  // Action plan
+  const d2=document.createElement('div');
+  d2.style.cssText='font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:10px 0 2px;';
+  d2.textContent='── Claude Connect Action Plan — Execute in Milo ──';
+  cont.appendChild(d2);
+  cont.appendChild(makeCard('🤖 Step-by-Step Milo Action Plan',actionPlan,'milo-actions'));
 }
 
 function showIteration(){
