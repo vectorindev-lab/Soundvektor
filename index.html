@@ -36,8 +36,9 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .tab.active{color:var(--accent2);border-bottom-color:var(--accent);}
 
 /* ── PANELS ── */
-.panel{flex:1;overflow-y:auto;display:none;flex-direction:column;min-height:0;}
-.panel.active{display:flex;}
+.panel{display:none;flex-direction:column;overflow-y:auto;}
+.panel.active{display:flex;flex:1;min-height:0;}
+.canvas-panel.active{flex:0;display:block;height:0;overflow:hidden;}
 
 /* ── CANVAS ── */
 .canvas-panel{overflow:hidden;display:flex;flex-direction:column;}
@@ -244,10 +245,10 @@ textarea.notes{background:var(--surface3);border:1px solid var(--border);color:v
 .milo-gen-btn{width:100%;padding:14px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:12px;}
 .milo-gen-btn:active{opacity:.8;}
 /* ── PERSISTENT BOTTOM ── */
-.persistent-bottom{flex-shrink:0;display:flex;flex-direction:column;border-top:2px solid var(--accent);background:var(--surface);height:26vh;min-height:190px;max-height:260px;}
-.persistent-bottom .tl-wrapper{flex:1;overflow-x:auto;overflow-y:hidden;position:relative;-webkit-overflow-scrolling:touch;min-height:0;}
+.persistent-bottom{flex-shrink:0;display:flex;flex-direction:column;border-top:2px solid var(--accent);background:var(--surface);}
+.persistent-bottom .tl-wrapper{flex:1;overflow-x:auto;overflow-y:hidden;position:relative;-webkit-overflow-scrolling:touch;min-height:60px;}
 .persistent-bottom .tl-inner{position:relative;min-width:100%;}
-.canvas-panel{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.canvas-panel{overflow:hidden;}
 /* Global desc strip on canvas */
 .gdesc-strip{background:var(--surface2);border-bottom:1px solid var(--border);padding:8px 10px;flex-shrink:0;}
 .gdesc-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:0;}
@@ -414,14 +415,24 @@ textarea.notes{background:var(--surface3);border:1px solid var(--border);color:v
 </header>
 
 <!-- SETTINGS BAR -->
+
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('canvas')">🎹 Canvas</div>
+  <div class="tab" onclick="switchTab('lyrics')">📝 Lyrics</div>
+  <div class="tab" onclick="switchTab('output')">📋 Output</div>
+  <div class="tab" onclick="switchTab('milo')">🎹 Milo</div>
+</div>
+
 <div class="sb" id="settingsBar">
   <div class="sb-main">
     <!-- Row 1: Core settings -->
     <div class="sb-field"><span class="sb-lbl">Song Name</span><input type="text" id="sName" value="Untitled Song" style="min-width:100px;max-width:130px" onchange="us('name',this.value)"></div>
     <div class="sb-field"><span class="sb-lbl">Genre</span>
       <div class="inst-dd">
-        <button class="sb-btn" id="genreDDBtn" onclick="toggleGenreDD(event)" style="min-width:100px;text-align:left" id="genreDDBtn"><span id="genreDDLabel">Pop</span> ▾</button>
-        <div class="inst-dd-panel" id="genreDDPanel" style="width:220px;"></div>
+        <button class="sb-btn" id="genreDDBtn" onclick="toggleGenreDD(event)" style="min-width:100px;text-align:left"><span id="genreDDLabel">Pop</span> ▾</button>
+        <div class="tpl-dd-panel" id="genreDDPanel" style="width:180px;max-height:250px;overflow-y:auto;"></div>
       </div>
       <select id="sGenre" style="display:none" onchange="us('genre',this.value)"></select>
     </div>
@@ -442,8 +453,7 @@ textarea.notes{background:var(--surface3);border:1px solid var(--border);color:v
     <div class="sb-div" style="flex-basis:100%;height:1px;"></div>
     <!-- Row 2: Sound description -->
     <div class="sb-field"><span class="sb-lbl">Style / Sub-genre</span><input type="text" id="sStyle" placeholder="e.g. Progressive Trance..." style="min-width:130px" onchange="us('style',this.value)"></div>
-    <div class="sb-field"><span class="sb-lbl">Sounds Like</span><input type="text" id="sSoundsLike" placeholder="e.g. Deadmau5, Above & Beyond..." style="min-width:150px" onchange="us('soundsLike',this.value)"></div>
-    <div class="sb-field"><span class="sb-lbl">Instruments</span>
+        <div class="sb-field"><span class="sb-lbl">Instruments</span>
       <div class="inst-dd">
         <button class="sb-btn" id="instDDBtn" onclick="toggleInstDD(event)">🎸 Select ▾</button>
         <div class="inst-dd-panel" id="instDDPanel"></div>
@@ -457,41 +467,17 @@ textarea.notes{background:var(--surface3);border:1px solid var(--border);color:v
         <div class="tpl-dd-panel" id="tplDDPanel"></div>
       </div>
     </div>
-    <div class="sb-field" style="min-width:160px"><span class="sb-lbl">AI Key <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent2);font-size:8px">↗ Get</a></span>
-      <div style="display:flex;gap:3px">
-        <input type="password" id="aiKeyInput" placeholder="Gemini API key..." style="flex:1;min-width:0">
-        <button class="sb-btn" onclick="saveApiKey()">Save</button>
-      </div>
-    </div>
-    <div class="sb-field" style="min-width:160px"><span class="sb-lbl">AI Model</span>
-      <div style="display:flex;gap:3px">
-        <input type="text" id="aiModelInput" placeholder="gemini-2.5-flash-lite" style="min-width:110px" onfocus="this.select()">
-        <button class="sb-btn" onclick="saveModelName()">Set</button>
-        <button class="sb-btn" id="checkModelsBtn" onclick="checkAvailableModels()">🔍</button>
-      </div>
-    </div>
-  </div>
-  <!-- Hidden elements for JS compatibility -->
+<!-- Hidden elements for JS compatibility -->
   <div style="display:none">
     <div id="globalInstChips"></div>
     <input type="range" id="sBpmR" min="60" max="200">
   </div>
 </div>
 
-<!-- TABS -->
-<div class="tabs">
-  <div class="tab active" onclick="switchTab('canvas')">🎹 Canvas</div>
-  <div class="tab" onclick="switchTab('lyrics')">📝 Lyrics</div>
-  <div class="tab" onclick="switchTab('output')">📋 Output</div>
-  <div class="tab" onclick="switchTab('milo')">🎹 Milo</div>
-</div>
-
 <!-- CANVAS PANEL -->
 <div class="panel canvas-panel active" id="panel-canvas">
   <div id="metaBar" style="display:none"></div>
-  <div class="canvas-hint" style="display:flex;align-items:center;justify-content:center;flex:1;color:var(--text3);font-size:13px;">
-    Use the timeline below to build your song structure
-  </div>
+
 </div>
 
 <!-- SETTINGS PANEL -->
@@ -523,7 +509,28 @@ textarea.notes{background:var(--surface3);border:1px solid var(--border);color:v
 
 <!-- OUTPUT PANEL -->
 <div class="panel" id="panel-output" style="overflow-y:auto;">
-  <div class="output-content">
+    <!-- AI Engine settings in Output tab -->
+  <div style="background:var(--surface2);border-bottom:1px solid var(--border);padding:10px 14px;flex-shrink:0;">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
+      <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:160px;">
+        <span style="font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Gemini API Key <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent2);font-size:8px;">↗ Get free key</a></span>
+        <div style="display:flex;gap:4px;">
+          <input type="password" id="aiKeyInput" placeholder="Paste Gemini API key..." style="flex:1;min-width:0;font-size:11px;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);color:var(--text);border-radius:6px;height:28px;outline:none;">
+          <button onclick="saveApiKey()" style="background:var(--surface3);border:1px solid var(--border);color:var(--text2);font-size:10px;padding:4px 8px;border-radius:6px;cursor:pointer;height:28px;white-space:nowrap;">Save</button>
+        </div>
+        <span style="font-size:9px;color:var(--text3);">Stored on device only. Never shared.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;min-width:180px;">
+        <span style="font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">AI Model</span>
+        <div style="display:flex;gap:4px;">
+          <input type="text" id="aiModelInput" placeholder="gemini-2.5-flash-lite" style="min-width:120px;font-size:11px;padding:4px 8px;background:var(--surface3);border:1px solid var(--border);color:var(--text);border-radius:6px;height:28px;outline:none;" onfocus="this.select()">
+          <button onclick="saveModelName()" style="background:var(--surface3);border:1px solid var(--border);color:var(--text2);font-size:10px;padding:4px 8px;border-radius:6px;cursor:pointer;height:28px;">Set</button>
+          <button id="checkModelsBtn" onclick="checkAvailableModels()" style="background:var(--surface3);border:1px solid var(--border);color:var(--text2);font-size:10px;padding:4px 8px;border-radius:6px;cursor:pointer;height:28px;">🔍</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<div class="output-content">
     <div class="gen-row">
       <label>Target Generator</label>
       <select id="genSelect" onchange="renderOutput()">
@@ -680,7 +687,7 @@ function updateSettingsUI() {
   g('sGenre').value=state.song.genre;
   g('sStyle').value=state.song.style;
   g('sMood').value=state.song.mood;
-  g('sSoundsLike').value=state.song.soundsLike;
+  const _sl=g('sSoundsLike');if(_sl)_sl.value=state.song.soundsLike;
   g('sBpm').value=state.song.bpm;
   const _bpmr=g('sBpmR');if(_bpmr)_bpmr.value=state.song.bpm;
   g('sKey').value=state.song.key;
@@ -1268,7 +1275,7 @@ function buildStylePrompt(){
   prompt+=` ${s.genre}`;
   if(s.style) prompt+=` ${s.style}`;
   prompt+=`. ${s.mood} feel. ${s.tempoFeel} groove.`;
-  if(s.soundsLike) prompt+=` In the style of ${s.soundsLike}.`;
+  // Sounds Like removed - not accepted by Suno v5
   // Global instruments
   const gd=s.globalDesc;
   if(gd.instruments&&gd.instruments.length) prompt+=` ${gd.instruments.slice(0,4).join(', ')}.`;
